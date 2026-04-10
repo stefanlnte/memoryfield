@@ -1,88 +1,91 @@
+// @ts-nocheck
 import { NextResponse } from 'next/server'
 
-const ECONOMIC_NODES = {
-  ssh: { id: 'ssh', name: 'Shanghai-Shenzhen-HK', type: 'primary_core', pressure: 0.73, hl: 14, lat: 31.2, lng: 121.5, critical: 'Taiwan Strait', correlations: { scs: 0.67, ukraine: 0.23 } },
-  prd: { id: 'prd', name: 'Pearl River Delta', type: 'primary_core', pressure: 0.68, hl: 90, lat: 23.1, lng: 113.3, critical: 'Dongjiang water', correlations: { scs: 0.41, myanmar: 0.18 } },
-  tokyo: { id: 'tokyo', name: 'Greater Tokyo', type: 'primary_core', pressure: 0.81, hl: 8, lat: 35.7, lng: 139.7, critical: 'Yen carry', correlations: { ukraine: 0.31, scs: 0.28 } },
-  rotterdam: { id: 'rotterdam', name: 'Rotterdam-Antwerp', type: 'transfer', pressure: 0.54, hl: 30, lat: 51.9, lng: 4.5, critical: 'Rhine levels', correlations: { sahel: 0.43, sudan: 0.29, ukraine: 0.51 } },
-  singapore: { id: 'singapore', name: 'Singapore', type: 'transfer', pressure: 0.61, hl: 7, lat: 1.3, lng: 103.8, critical: 'Malacca Strait', correlations: { scs: 0.84, myanmar: 0.37 } },
-  dubai: { id: 'dubai', name: 'Dubai', type: 'transfer', pressure: 0.44, hl: 180, lat: 25.2, lng: 55.3, critical: 'Gold/crypto', correlations: { sudan: 0.67, sahel: 0.52, myanmar: 0.41 } },
-  london: { id: 'london', name: 'City of London', type: 'control', pressure: 0.77, hl: 1, lat: 51.5, lng: -0.1, critical: 'Eurodollar clearing', correlations: { ukraine: 0.44, israel: 0.31 } },
-  delaware: { id: 'delaware', name: 'Delaware Nexus', type: 'control', pressure: 0.89, hl: 365, lat: 39.2, lng: -75.5, critical: 'Beneficial ownership', correlations: { sahel: 0.38, sudan: 0.44 } },
-  zug: { id: 'zug', name: 'Zug/Zürich', type: 'control', pressure: 0.52, hl: 60, lat: 47.4, lng: 8.5, critical: 'Crypto custody', correlations: {} },
-  panama: { id: 'panama', name: 'Panama Canal', type: 'transfer', pressure: 0.83, hl: 21, lat: 9.1, lng: -79.7, critical: 'Gatun Lake', correlations: { sahel: 0.21 } },
-  baltic: { id: 'baltic', name: 'Nord Stream Corridor', type: 'primary_core', pressure: 0.91, hl: 720, lat: 55.0, lng: 18.0, critical: 'LNG replacement', correlations: { ukraine: 0.73, sahel: 0.19 } }
+interface EconomicNode {
+  id: string
+  name: string
+  value: number
+  trend: number
+  correlations: Record<string, number>
 }
 
-function calculateEconomicPressure(conflictId, daysSince = 30) {
-  const pressures = []
-  
-  Object.values(ECONOMIC_NODES).forEach(node => {
-    const correlation = node.correlations[conflictId]
-    if (!correlation) return
-    
-    const decay = 0.9 * Math.pow(0.5, daysSince / node.hl) + 0.1
-    const weighted = node.pressure * correlation * decay
-    
+const ECONOMIC_NODES: Record<string, EconomicNode> = {
+  'ASM-001': { id: 'ASM-001', name: 'Energy Security', value: 78, trend: 2.3, correlations: {'ASM-002': 0.84, 'ASM-005': 0.72} },
+  'ASM-002': { id: 'ASM-002', name: 'Supply Chains', value: 65, trend: -1.2, correlations: {'ASM-001': 0.84, 'ASM-003': 0.68} },
+  'ASM-003': { id: 'ASM-003', name: 'Food Systems', value: 71, trend: 0.8, correlations: {'ASM-002': 0.68, 'ASM-007': 0.55} },
+  'ASM-004': { id: 'ASM-004', name: 'Currency Flows', value: 82, trend: 3.1, correlations: {'ASM-005': 0.91, 'ASM-008': 0.76} },
+  'ASM-005': { id: 'ASM-005', name: 'Debt Structures', value: 59, trend: -2.4, correlations: {'ASM-004': 0.91, 'ASM-001': 0.72} },
+  'ASM-006': { id: 'ASM-006', name: 'Labor Markets', value: 68, trend: 1.5, correlations: {'ASM-007': 0.63, 'ASM-010': 0.58} },
+  'ASM-007': { id: 'ASM-007', name: 'Tech Transfer', value: 74, trend: 4.2, correlations: {'ASM-006': 0.63, 'ASM-003': 0.55} },
+  'ASM-008': { id: 'ASM-008', name: 'Resource Access', value: 61, trend: -0.9, correlations: {'ASM-004': 0.76, 'ASM-009': 0.81} },
+  'ASM-009': { id: 'ASM-009', name: 'Trade Routes', value: 77, trend: 1.8, correlations: {'ASM-008': 0.81, 'ASM-011': 0.69} },
+  'ASM-010': { id: 'ASM-010', name: 'Manufacturing', value: 70, trend: 0.3, correlations: {'ASM-006': 0.58, 'ASM-002': 0.61} },
+  'ASM-011': { id: 'ASM-011', name: 'Digital Infrastructure', value: 85, trend: 5.1, correlations: {'ASM-009': 0.69, 'ASM-007': 0.74} },
+}
+
+function calculateEconomicPressure(conflictId: string, daysSince: number = 30): any[] {
+  const pressures: any[] = []
+
+  Object.values(ECONOMIC_NODES).forEach((node: EconomicNode) => {
+    const basePressure = node.value * (1 + node.trend / 100)
+    const conflictMultiplier = conflictId? 1.15 : 1.0
+    const timeDecay = Math.exp(-daysSince / 90)
+
     pressures.push({
-      node: node.id,
+      nodeId: node.id,
       name: node.name,
-      type: node.type,
-      basePressure: node.pressure,
-      correlation,
-      decay: Math.round(decay * 1000) / 1000,
-      weighted: Math.round(weighted * 1000) / 1000,
-      halfLife: node.hl,
-      critical: node.critical
+      pressure: Math.round(basePressure * conflictMultiplier * timeDecay),
+      trend: node.trend,
+      correlations: node.correlations
     })
   })
-  
-  const total = pressures.reduce((sum, p) => sum + p.weighted, 0)
-  const normalized = Math.min(2.0, total * 1.5)
-  
-  return {
-    total,
-    normalized: Math.round(normalized * 1000) / 1000,
-    nodes: pressures.length,
-    drivers: pressures.sort((a, b) => b.weighted - a.weighted)
-  }
+
+  return pressures.sort((a, b) => b.pressure - a.pressure)
 }
 
-export async function GET(request) {
+function getNodeCorrelations(nodeId: string): Record<string, number> {
+  const node = ECONOMIC_NODES[nodeId]
+  return node? node.correlations : {}
+}
+
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const conflict = searchParams.get('conflict')
+  const conflictId = searchParams.get('conflict') || 'global'
+  const days = parseInt(searchParams.get('days') || '30')
   const nodeId = searchParams.get('node')
-  
-  if (nodeId && ECONOMIC_NODES[nodeId]) {
-    return NextResponse.json(ECONOMIC_NODES[nodeId])
-  }
-  
-  if (conflict) {
+
+  if (nodeId) {
     return NextResponse.json({
-      conflict,
-      economicPressure: calculateEconomicPressure(conflict),
+      node: ECONOMIC_NODES[nodeId],
+      correlations: getNodeCorrelations(nodeId),
       timestamp: new Date().toISOString()
     })
   }
-  
-  // Return all nodes and aggregated pressures
-  const conflicts = ['ukraine', 'israel', 'scs', 'armenia', 'sudan', 'myanmar', 'sahel']
-  const aggregated = {}
-  
-  conflicts.forEach(c => {
-    aggregated[c] = calculateEconomicPressure(c)
-  })
-  
+
+  const pressures = calculateEconomicPressure(conflictId, days)
+
   return NextResponse.json({
-    model: 'AMS-LS Economic Topology',
-    timestamp: new Date().toISOString(),
-    nodes: Object.values(ECONOMIC_NODES),
-    nodeCount: Object.keys(ECONOMIC_NODES).length,
-    conflictPressures: aggregated,
-    summary: {
-      highestPressureNode: Object.values(ECONOMIC_NODES).sort((a, b) => b.pressure - a.pressure)[0],
-      mostConnectedConflict: Object.entries(aggregated).sort((a, b) => b[1].nodes - a[1].nodes)[0],
-      averagePressure: Math.round(Object.values(ECONOMIC_NODES).reduce((s, n) => s + n.pressure, 0) / Object.keys(ECONOMIC_NODES).length * 100) / 100
-    }
+    version: 'v248',
+    conflict: conflictId,
+    timeframe: days,
+    nodes: pressures,
+    topology: 'economic',
+    timestamp: new Date().toISOString()
+  })
+}
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  const { nodeId, value, trend } = body
+
+  if (nodeId && ECONOMIC_NODES[nodeId]) {
+    ECONOMIC_NODES[nodeId].value = value?? ECONOMIC_NODES[nodeId].value
+    ECONOMIC_NODES[nodeId].trend = trend?? ECONOMIC_NODES[nodeId].trend
+  }
+
+  return NextResponse.json({
+    success: true,
+    updated: nodeId,
+    node: ECONOMIC_NODES[nodeId]
   })
 }
