@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-function ignitionProbability(data, days) {
+function ignitionProbability(data: any, days: number) {
   const struct = data.structural_risk / 50
   const legitInverse = 1 - data.state_legitimacy
   const youth = data.youth_bulge ? 0.3 : 0
@@ -71,7 +71,7 @@ const CONFLICTS = {
   sahel: { tactical_hl: 90, tactical_weight: 0.74, structural_risk: 39, memory_persistence: 0.87, cross_links_active: 2, youth_bulge: true, state_legitimacy: 0.41, recent_escalation: 0.25 }
 }
 
-export async function GET(request) {
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const days = parseInt(searchParams.get('days') || '30')
   
