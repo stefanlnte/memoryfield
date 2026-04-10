@@ -1,2 +1,0 @@
-import { NextResponse } from 'next/server'
-export async function GET() { return NextResponse.json({ timestamp: new Date().toISOString(), model: 'ASM-LS v248', conflicts: [{id:'ukraine',hl:8},{id:'israel',hl:14},{id:'sahel',hl:90}] }) }

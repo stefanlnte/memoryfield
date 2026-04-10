@@ -1,8 +1,0 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-:root { --bg: #050507; --fg: #e5e7eb; --accent: #00d4ff; }
-html, body { background: var(--bg); color: var(--fg); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-thumb { background: #1f2937; }
-* { -webkit-tap-highlight-color: transparent; }
