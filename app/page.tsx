@@ -1,269 +1,150 @@
-'use client'
 
-import { useState, useEffect } from 'react'
+"use client";
+import { useState, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 
-const NODES = [
-  { id: 'ASM-001', name: 'Energy', value: 78, trend: 2.3, x: 0, y: -120 },
-  { id: 'ASM-002', name: 'Supply', value: 65, trend: -1.2, x: 95, y: -74 },
-  { id: 'ASM-003', name: 'Food', value: 71, trend: 0.8, x: 114, y: 18 },
-  { id: 'ASM-004', name: 'Currency', value: 82, trend: 3.1, x: 68, y: 99 },
-  { id: 'ASM-005', name: 'Debt', value: 59, trend: -2.4, x: -28, y: 117 },
-  { id: 'ASM-006', name: 'Labor', value: 68, trend: 1.5, x: -105, y: 58 },
-  { id: 'ASM-007', name: 'Tech', value: 74, trend: 4.2, x: -105, y: -58 },
-  { id: 'ASM-008', name: 'Resource', value: 61, trend: -0.9, x: -28, y: -117 },
-  { id: 'ASM-009', name: 'Trade', value: 77, trend: 1.8, x: 68, y: -99 },
-  { id: 'ASM-010', name: 'Manufacturing', value: 70, trend: 0.3, x: 114, y: -18 },
-  { id: 'ASM-011', name: 'Digital', value: 85, trend: 5.1, x: 95, y: 74 },
-]
+const BRUSHES = ["/ink_splatter_1.png", "/ink_blot_1.png"];
 
-const CORRELATIONS: Record<string, number> = {
-  'ASM-001-ASM-002': 0.84, 'ASM-001-ASM-005': 0.72,
-  'ASM-002-ASM-003': 0.68, 'ASM-004-ASM-005': 0.91,
-  'ASM-004-ASM-008': 0.76, 'ASM-008-ASM-009': 0.81,
-  'ASM-009-ASM-011': 0.69, 'ASM-007-ASM-011': 0.74,
+function InkTrails({ trails }: any) {
+  return (
+    <>
+      {trails.map((t: any) => (
+        <motion.img
+          key={t.id}
+          src={BRUSHES[t.brush % BRUSHES.length]}
+          initial={{ scale: 1.3, rotate: t.rot, opacity: 1 }}
+          animate={{ scale: 0, rotate: t.rot + 120 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="absolute pointer-events-none"
+          style={{ left: t.x, top: t.y, width: t.size, height: t.size }}
+        />
+      ))}
+    </>
+  );
 }
 
-export default function Home() {
-  const [activeTab, setActiveTab] = useState('economic')
-  const [selectedNode, setSelectedNode] = useState<string | null>(null)
-  const [fieldData, setFieldData] = useState({ coherence: 0.847, entropy: 2.34, persistence: 0.91 })
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFieldData(prev => ({
-        coherence: Math.min(0.99, Math.max(0.7, prev.coherence + (Math.random() - 0.5) * 0.02)),
-        entropy: Math.min(3, Math.max(1.5, prev.entropy + (Math.random() - 0.5) * 0.05)),
-        persistence: Math.min(0.99, Math.max(0.8, prev.persistence + (Math.random() - 0.5) * 0.01)),
-      }))
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const getCorrelation = (a: string, b: string) => {
-    const key1 = `${a}-${b}`
-    const key2 = `${b}-${a}`
-    return CORRELATIONS[key1] || CORRELATIONS[key2] || 0
-  }
+function OrbitingBackground({ mouseX, mouseY, trails }: any) {
+  const items = useMemo(
+    () =>
+      Array.from({ length: 22 }).map((_, i) => ({
+        id: i,
+        type: i % 3 === 0 ? "square" : i % 3 === 1 ? "circle" : "tri",
+        left: 2 + Math.random() * 96,
+        top: 2 + Math.random() * 90,
+        size: 5 + Math.random() * 12,
+        rx: 12 + Math.random() * 28,
+        ry: 12 + Math.random() * 28,
+        rotate: Math.random() * 360,
+        parallax: 0.3 + Math.random() * 1.1,
+        duration: 7 + Math.random() * 14,
+      })),
+    []
+  );
 
   return (
-    <div className="min-h-screen bg-[#050508] text-zinc-200 flex flex-col">
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
-        body { font-family: 'IBM Plex Mono', monospace; }
-      `}</style>
-
-      {/* Header */}
-      <header className="border-b border-zinc-800/50 px-4 py-3 flex items-center justify-between backdrop-blur-xl bg-black/20 sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span className="text-xs tracking-[0.3em] text-zinc-500">MEMORYFIELD</span>
-          <span className="text-xs text-amber-500/80">v248</span>
-        </div>
-        <div className="text-[10px] text-zinc-600 tracking-widest">AMS-LS</div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto pb-20">
-        {activeTab === 'field' && (
-          <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl mb-8 tracking-wider">FIELD STATE</h1>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="border border-zinc-800 rounded-xl p-6 bg-zinc-950/50">
-                <div className="text-[11px] text-zinc-500 tracking-widest mb-2">COHERENCE</div>
-                <div className="text-4xl font-light">{fieldData.coherence.toFixed(3)}</div>
-                <div className="mt-3 h-1 bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: `${fieldData.coherence * 100}%` }} />
-                </div>
-              </div>
-              <div className="border border-zinc-800 rounded-xl p-6 bg-zinc-950/50">
-                <div className="text-[11px] text-zinc-500 tracking-widest mb-2">ENTROPY</div>
-                <div className="text-4xl font-light">{fieldData.entropy.toFixed(2)}</div>
-                <div className="mt-3 h-1 bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500/70 transition-all duration-1000" style={{ width: `${(fieldData.entropy / 3) * 100}%` }} />
-                </div>
-              </div>
-              <div className="border border-zinc-800 rounded-xl p-6 bg-zinc-950/50">
-                <div className="text-[11px] text-zinc-500 tracking-widest mb-2">PERSISTENCE</div>
-                <div className="text-4xl font-light">{fieldData.persistence.toFixed(2)}</div>
-                <div className="mt-3 h-1 bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 transition-all duration-1000" style={{ width: `${fieldData.persistence * 100}%` }} />
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-12 border border-amber-500/20 rounded-xl p-6 bg-amber-950/10">
-              <div className="text-[11px] text-amber-500/70 tracking-widest mb-3">FIELD EQUATION</div>
-              <div className="font-mono text-sm text-zinc-300">
-                χ<sub>AMS-LS</sub> = ∫<sub>RockPi4+</sub><sup>persistent</sup> ∇M · dΩ
-              </div>
-              <div className="mt-3 text-xs text-zinc-500">Current: <span className="text-amber-500">12.22</span> — Field cohering</div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'economic' && (
-          <div className="p-4 md:p-6 max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-xl md:text-2xl tracking-wider">ECONOMIC TOPOLOGY</h1>
-              <div className="text-[10px] text-zinc-600 tracking-widest">11 NODES</div>
-            </div>
-            
-            <div className="relative w-full aspect-square max-w-[600px] mx-auto">
-              <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                {NODES.map((n1, i) => 
-                  NODES.slice(i + 1).map(n2 => {
-                    const corr = getCorrelation(n1.id, n2.id)
-                    if (corr < 0.7) return null
-                    return (
-                      <line
-                        key={`${n1.id}-${n2.id}`}
-                        x1="50%" y1="50%"
-                        x2="50%" y2="50%"
-                        stroke="rgb(245 158 11)"
-                        strokeOpacity={selectedNode && (selectedNode === n1.id || selectedNode === n2.id) ? 0.8 : 0.15}
-                        strokeWidth={selectedNode && (selectedNode === n1.id || selectedNode === n2.id) ? 2 : 1}
-                        transform={`translate(${n1.x}, ${n1.y})`}
-                        x2={n2.x - n1.x}
-                        y2={n2.y - n1.y}
-                      />
-                    )
-                  })
-                )}
-              </svg>
-              
-              {NODES.map(node => {
-                const isSelected = selectedNode === node.id
-                const trendColor = node.trend > 0 ? 'text-amber-500' : node.trend < 0 ? 'text-zinc-500' : 'text-zinc-600'
-                const trendSymbol = node.trend > 0 ? '↑' : node.trend < 0 ? '↓' : '→'
-                
-                return (
-                  <button
-                    key={node.id}
-                    onClick={() => setSelectedNode(isSelected ? null : node.id)}
-                    className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-full border transition-all duration-300 ${
-                      isSelected 
-                        ? 'border-amber-500 bg-amber-500/10 scale-110 z-10' 
-                        : 'border-zinc-800 bg-zinc-950/80 hover:border-zinc-700 hover:bg-zinc-900/80'
-                    }`}
-                    style={{ transform: `translate(calc(-50% + ${node.x}px), calc(-50% + ${node.y}px))` }}
-                  >
-                    <div className="flex flex-col items-center">
-                      <div className="text-[8px] text-zinc-600">{node.id.split('-')[1]}</div>
-                      <div className="text-[10px] mt-0.5 leading-tight">{node.name.slice(0,4)}</div>
-                      <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-sm">{node.value}</span>
-                        <span className={`text-[10px] ${trendColor}`}>{trendSymbol}</span>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-              
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-amber-500/20 animate-pulse" />
-            </div>
-
-            {selectedNode && (
-              <div className="mt-8 max-w-md mx-auto border border-zinc-800 rounded-xl p-4 bg-zinc-950/80 backdrop-blur">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm font-medium">{NODES.find(n => n.id === selectedNode)?.name}</div>
-                  <button onClick={() => setSelectedNode(null)} className="text-zinc-600 hover:text-zinc-400">✕</button>
-                </div>
-                <div className="space-y-2 text-xs">
-                  {NODES.filter(n => n.id !== selectedNode).map(n => {
-                    const corr = getCorrelation(selectedNode, n.id)
-                    if (corr === 0) return null
-                    return (
-                      <div key={n.id} className="flex items-center justify-between">
-                        <span className="text-zinc-500">{n.name}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-1 bg-zinc-900 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-500/60" style={{ width: `${corr * 100}%` }} />
-                          </div>
-                          <span className="text-amber-500/80 w-8 text-right">{corr.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'matrix' && (
-          <div className="p-4 md:p-6 max-w-4xl mx-auto">
-            <h1 className="text-xl md:text-2xl tracking-wider mb-6">CORRELATION MATRIX</h1>
-            <div className="overflow-x-auto">
-              <div className="inline-block min-w-full">
-                <div className="grid grid-cols-12 gap-1 text-[10px]">
-                  <div></div>
-                  {NODES.map(n => <div key={n.id} className="text-center text-zinc-600 pb-1">{n.id.slice(-3)}</div>)}
-                  {NODES.map((row, i) => (
-                    <>
-                      <div className="text-right pr-2 text-zinc-600 flex items-center justify-end">{row.id.slice(-3)}</div>
-                      {NODES.map((col, j) => {
-                        const v = i === j ? 1 : getCorrelation(row.id, col.id) || (0.3 + Math.random() * 0.4)
-                        const intensity = i === j ? 1 : v
-                        return (
-                          <div
-                            key={`${i}-${j}`}
-                            className="aspect-square flex items-center justify-center rounded-sm"
-                            style={{ 
-                              backgroundColor: i === j ? '#f59e0b' : `rgba(245, 158, 11, ${intensity * 0.85})`,
-                              color: i === j || intensity > 0.7 ? '#000' : '#a1a1aa'
-                            }}
-                            title={`${row.name} ↔ ${col.name}: ${v.toFixed(2)}`}
-                          >
-                            {i === j ? '1' : v > 0.65 ? v.toFixed(1) : ''}
-                          </div>
-                        )
-                      })}
-                    </>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'tactical' && (
-          <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl mb-8 tracking-wider">TACTICAL</h1>
-            <div className="text-zinc-600 text-sm">Tactical overlay — coming online</div>
-          </div>
-        )}
-
-        {activeTab === 'socio' && (
-          <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl mb-8 tracking-wider">SOCIO</h1>
-            <div className="text-zinc-600 text-sm">Socio-cultural layer — coming online</div>
-          </div>
-        )}
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-zinc-800/50 bg-black/80 backdrop-blur-xl z-50">
-        <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
-          {[
-            { id: 'field', label: 'FIELD', icon: '◯' },
-            { id: 'economic', label: 'ECONOMIC', icon: '⬡' },
-            { id: 'matrix', label: 'MATRIX', icon: '⊞' },
-            { id: 'tactical', label: 'TACTICAL', icon: '⬔' },
-            { id: 'socio', label: 'SOCIO', icon: '◈' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all min-w-[64px] ${
-                activeTab === tab.id ? 'text-amber-500' : 'text-zinc-600 hover:text-zinc-400'
-              }`}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <InkTrails trails={trails} />
+      {items.map((it: any) => {
+        const px = useTransform(mouseX, (v: number) => v * it.parallax);
+        const py = useTransform(mouseY, (v: number) => v * it.parallax);
+        return (
+          <motion.div key={it.id} className="absolute" style={{ left: `${it.left}%`, top: `${it.top}%`, x: px, y: py }}>
+            <motion.div
+              animate={{ x: [0, it.rx, 0, -it.rx, 0], y: [0, -it.ry, 0, it.ry, 0], rotate: [it.rotate, it.rotate + 360] }}
+              transition={{ duration: it.duration, repeat: Infinity, ease: "linear" }}
             >
-              <span className="text-lg leading-none">{tab.icon}</span>
-              <span className="text-[9px] tracking-widest">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+              {it.type === "square" && <div className="bg-black" style={{ width: it.size, height: it.size }} />}
+              {it.type === "circle" && <div className="bg-black rounded-full" style={{ width: it.size, height: it.size }} />}
+              {it.type === "tri" && (
+                <div style={{ width: 0, height: 0, borderLeft: `${it.size / 2}px solid transparent`, borderRight: `${it.size / 2}px solid transparent`, borderBottom: `${it.size}px solid black` }} />
+              )}
+            </motion.div>
+          </motion.div>
+        );
+      })}
+      <svg viewBox="0 0 1000 800" className="absolute inset-0 w-full h-full">
+        <path d="M 60 90 C 120 10, 220 140, 280 80 S 380 20, 440 90" fill="none" stroke="black" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M 680 120 Q 750 40, 820 110 T 920 90 Q 880 150, 860 180" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
+        <path d="M 50 650 C 120 600, 180 720, 250 650 S 340 520, 410 580" fill="none" stroke="black" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
     </div>
-  )
+  );
+}
+
+export default function Page() {
+  const router = useRouter();
+  const ref = useRef<HTMLDivElement>(null);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const springX = useSpring(mouseX, { stiffness: 60, damping: 20 });
+  const springY = useSpring(mouseY, { stiffness: 60, damping: 20 });
+  const [hover, setHover] = useState<string | null>(null);
+  const [trails, setTrails] = useState<any[]>([]);
+  const last = useRef({ x: 0, y: 0 });
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    mouseX.set(e.clientX - rect.left - rect.width / 2);
+    mouseY.set(e.clientY - rect.top - rect.height / 2);
+    const dist = Math.hypot(cx - last.current.x, cy - last.current.y);
+    if (dist > 10) {
+      const id = Math.random();
+      const newTrail = { id, x: cx, y: cy, size: 8 + Math.random() * 18, rot: Math.random() * 360, brush: Math.floor(Math.random() * BRUSHES.length) };
+      setTrails((prev) => [...prev.slice(-18), newTrail]);
+      setTimeout(() => setTrails((prev) => prev.filter((t) => t.id !== id)), 700);
+      last.current = { x: cx, y: cy };
+    }
+  };
+
+  return (
+    <section ref={ref} onMouseMove={onMouseMove} className="relative w-full min-h-screen bg-white text-black overflow-hidden flex items-center justify-center select-none cursor-crosshair">
+      <OrbitingBackground mouseX={springX} mouseY={springY} trails={trails} />
+
+      <div className="relative w-full max-w-[1100px] aspect-[1000/750] mx-4 z-10">
+        <svg viewBox="0 0 1000 800" className="absolute inset-0 w-full h-full">
+          <g className="cursor-pointer" onMouseEnter={() => setHover("narrative")} onMouseLeave={() => setHover(null)} onClick={() => router.push("/narrative")}>
+            <rect x="70" y="45" width="190" height="190" transform={`rotate(${hover === "narrative" ? 12 : 9} 165 140) scale(${hover === "narrative" ? 1.06 : 1})`} fill="black" />
+          </g>
+          <g className="cursor-pointer" onMouseEnter={() => setHover("series")} onMouseLeave={() => setHover(null)} onClick={() => router.push("/series")}>
+            <circle cx="380" cy="325" r={hover === "series" ? 152 : 145} fill="black" />
+          </g>
+          <g className="cursor-pointer" onMouseEnter={() => setHover("odds")} onMouseLeave={() => setHover(null)} onClick={() => router.push("/odds")}>
+            <path d="M 205 435 L 30 570 L 205 705 Z" fill="black" transform={`rotate(-2 120 570) scale(${hover === "odds" ? 1.08 : 1})`} />
+          </g>
+
+          <line x1="262" y1="75" x2="282" y2="165" stroke="black" strokeWidth="4" strokeDasharray="6 8" strokeLinecap="round" />
+          <line x1="75" y1="355" x2="125" y2="465" stroke="black" strokeWidth="4" strokeDasharray="6 8" strokeLinecap="round" />
+          <line x1="215" y1="530" x2="255" y2="595" stroke="black" strokeWidth="4" strokeDasharray="6 8" strokeLinecap="round" />
+          <line x1="210" y1="650" x2="495" y2="595" stroke="black" strokeWidth="7" />
+          <line x1="215" y1="685" x2="710" y2="595" stroke="black" strokeWidth="1.5" strokeDasharray="12 8 2 8" />
+          <path d="M 405 765 C 430 680, 580 590, 770 585 C 880 582, 965 615, 975 645 C 985 665, 970 685, 935 700 C 820 735, 620 785, 505 795 C 445 800, 405 785, 405 765 Z" fill="black" />
+        </svg>
+
+        <div className="absolute top-[6%] left-[29%] flex items-start leading-none cursor-pointer" onMouseEnter={() => setHover("narrative")} onMouseLeave={() => setHover(null)} onClick={() => router.push("/narrative")}>
+          <span className="text-[52px] md:text-[64px] font-black tracking-tighter">N</span>
+          <span className="text-[18px] md:text-[22px] font-black mt-[8px] ml-[2px]">ARATIVE</span>
+        </div>
+        <div className="absolute top-[48%] left-[49%] flex items-start leading-none cursor-pointer" onMouseEnter={() => setHover("series")} onMouseLeave={() => setHover(null)} onClick={() => router.push("/series")}>
+          <span className="text-[46px] md:text-[58px] font-black tracking-tighter">S</span>
+          <span className="text-[18px] md:text-[22px] font-black mt-[8px] ml-[1px]">ERIES</span>
+        </div>
+        <div className="absolute bottom-[14%] left-[22%] flex items-start leading-none cursor-pointer" onMouseEnter={() => setHover("odds")} onMouseLeave={() => setHover(null)} onClick={() => router.push("/odds")}>
+          <span className="text-[46px] md:text-[58px] font-black tracking-tighter">O</span>
+          <span className="text-[18px] md:text-[22px] font-black mt-[10px] ml-[1px]">DDS</span>
+        </div>
+
+        <div className="absolute bottom-[6%] right-[5%] w-[52%] md:w-[42%] text-white px-10 md:px-16 py-6 flex flex-col gap-1">
+          <a href="#about" className="flex gap-3 items-center group">
+            <span className="w-[5px] h-[22px] bg-white inline-block group-hover:h-[28px] transition-all" />
+            <span className="text-[18px] md:text-[20px] lowercase group-hover:translate-x-1 transition-transform">about me</span>
+          </a>
+          <a href="#contact" className="text-[18px] md:text-[20px] lowercase ml-[17px] hover:translate-x-1 transition-transform">contact</a>
+        </div>
+      </div>
+    </section>
+  );
 }

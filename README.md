@@ -1,14 +1,18 @@
-# memoryfield.xyz
 
-Asymmetric Memory Model — conflicts decay at different rates.
+# Ink Hero - Vercel Ready
 
-## Three layers
-- **Tactical**: 8-90 day half-life
-- **Economic**: 11 nodes, 1-720 days
-- **Sociological**: 25-100 year half-life
+1. Push pe GitHub:
+   git init
+   git add .
+   git commit -m "initial"
+   git branch -M main
+   git remote add origin https://github.com/USER/REPO.git
+   git push -u origin main
 
-P(ignition) = σ(structural + tactical + memory + economic − stability)
+2. Vercel: New Project -> Import repo -> Deploy (nu trebuie setari extra)
 
-## Run
-npm install
-npm run dev
+Pensulele sunt in /public/ink_*.png - full transparent.
+
+- Next.js 14 App Router
+- Tailwind
+- framer-motion
